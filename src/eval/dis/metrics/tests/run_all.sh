@@ -1,0 +1,1 @@
+python beta_vae_test.py && dci_test.py && factor_vae_test.py && mig_test.py && modularity_explictness_test.py && sap_score_test.py

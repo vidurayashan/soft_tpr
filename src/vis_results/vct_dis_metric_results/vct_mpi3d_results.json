@@ -1,0 +1,510 @@
+{
+  "iter_100": [
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 0.3073,
+        "eval_accuracy": 0.2938
+      },
+      "dci_score": {
+        "informativeness_train": 0.6129285714285714,
+        "informativeness_test": 0.39154285714285714,
+        "disentanglement": 0.10611011339356834,
+        "completeness": 0.12616842359147956
+      },
+      "MIG_score": {
+        "discrete_mig": 0.0003098236822158621
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.2041,
+        "eval_accuracy": 0.1984,
+        "num_active_dims": 20
+      }
+    },
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 0.3111,
+        "eval_accuracy": 0.297
+      },
+      "dci_score": {
+        "informativeness_train": 0.6364714285714286,
+        "informativeness_test": 0.4013142857142858,
+        "disentanglement": 0.13121653374996547,
+        "completeness": 0.17905962162838046
+      },
+      "MIG_score": {
+        "discrete_mig": 0.000330929569722521
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.2091,
+        "eval_accuracy": 0.199,
+        "num_active_dims": 20
+      }
+    },
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 0.3088,
+        "eval_accuracy": 0.2916
+      },
+      "dci_score": {
+        "informativeness_train": 0.6199142857142858,
+        "informativeness_test": 0.39559999999999995,
+        "disentanglement": 0.09205191879077802,
+        "completeness": 0.14284101512385863
+      },
+      "MIG_score": {
+        "discrete_mig": 0.00010732263605608665
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.2106,
+        "eval_accuracy": 0.2068,
+        "num_active_dims": 20
+      }
+    },
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 0.3195,
+        "eval_accuracy": 0.3224
+      },
+      "dci_score": {
+        "informativeness_train": 0.6376285714285713,
+        "informativeness_test": 0.40882857142857143,
+        "disentanglement": 0.1447566905615208,
+        "completeness": 0.2825386277981213
+      },
+      "MIG_score": {
+        "discrete_mig": 0.0008208909949493454
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.2416,
+        "eval_accuracy": 0.2338,
+        "num_active_dims": 20
+      }
+    },
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 0.3106,
+        "eval_accuracy": 0.304
+      },
+      "dci_score": {
+        "informativeness_train": 0.6265428571428571,
+        "informativeness_test": 0.3955142857142858,
+        "disentanglement": 0.14288054003763956,
+        "completeness": 0.16503194590325052
+      },
+      "MIG_score": {
+        "discrete_mig": 0.00020470650548894283
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.2642,
+        "eval_accuracy": 0.26,
+        "num_active_dims": 20
+      }
+    }
+  ],
+  "iter_1000": [
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 0.5445,
+        "eval_accuracy": 0.547
+      },
+      "dci_score": {
+        "informativeness_train": 0.7269428571428572,
+        "informativeness_test": 0.4879428571428571,
+        "disentanglement": 0.1918780295518198,
+        "completeness": 0.17772350571561582
+      },
+      "MIG_score": {
+        "discrete_mig": 0.011701417305337287
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.3581,
+        "eval_accuracy": 0.3458,
+        "num_active_dims": 20
+      }
+    },
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 0.5629,
+        "eval_accuracy": 0.5604
+      },
+      "dci_score": {
+        "informativeness_train": 0.7404428571428572,
+        "informativeness_test": 0.5141142857142856,
+        "disentanglement": 0.23954658039471716,
+        "completeness": 0.24663936678191092
+      },
+      "MIG_score": {
+        "discrete_mig": 0.010898034516288442
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.3447,
+        "eval_accuracy": 0.3348,
+        "num_active_dims": 20
+      }
+    },
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 0.5781,
+        "eval_accuracy": 0.584
+      },
+      "dci_score": {
+        "informativeness_train": 0.7249999999999999,
+        "informativeness_test": 0.49900000000000005,
+        "disentanglement": 0.19860095478182033,
+        "completeness": 0.16051724337582615
+      },
+      "MIG_score": {
+        "discrete_mig": 0.011395705659537025
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.3758,
+        "eval_accuracy": 0.3792,
+        "num_active_dims": 20
+      }
+    },
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 0.6002,
+        "eval_accuracy": 0.6062
+      },
+      "dci_score": {
+        "informativeness_train": 0.7401142857142856,
+        "informativeness_test": 0.5242285714285714,
+        "disentanglement": 0.266869520147513,
+        "completeness": 0.2568797894303169
+      },
+      "MIG_score": {
+        "discrete_mig": 0.018126701867234394
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.3825,
+        "eval_accuracy": 0.3756,
+        "num_active_dims": 20
+      }
+    },
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 0.5882,
+        "eval_accuracy": 0.5892
+      },
+      "dci_score": {
+        "informativeness_train": 0.7431285714285715,
+        "informativeness_test": 0.5229714285714286,
+        "disentanglement": 0.2045495210968174,
+        "completeness": 0.18936033184470571
+      },
+      "MIG_score": {
+        "discrete_mig": 0.010813282395562904
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.375,
+        "eval_accuracy": 0.3622,
+        "num_active_dims": 20
+      }
+    }
+  ],
+  "iter_10000": [
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 0.8786,
+        "eval_accuracy": 0.878
+      },
+      "dci_score": {
+        "informativeness_train": 0.8535285714285715,
+        "informativeness_test": 0.7002857142857142,
+        "disentanglement": 0.4399241414977765,
+        "completeness": 0.3691745589900783
+      },
+      "MIG_score": {
+        "discrete_mig": 0.1178592235514843
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.3776,
+        "eval_accuracy": 0.3838,
+        "num_active_dims": 20
+      }
+    },
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 0.9959,
+        "eval_accuracy": 0.9946
+      },
+      "dci_score": {
+        "informativeness_train": 0.8914428571428571,
+        "informativeness_test": 0.7383714285714288,
+        "disentanglement": 0.5609290098530222,
+        "completeness": 0.4589295996790138
+      },
+      "MIG_score": {
+        "discrete_mig": 0.2703989140088716
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.3995,
+        "eval_accuracy": 0.4096,
+        "num_active_dims": 20
+      }
+    },
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 0.9999,
+        "eval_accuracy": 0.9986
+      },
+      "dci_score": {
+        "informativeness_train": 0.8938857142857142,
+        "informativeness_test": 0.741057142857143,
+        "disentanglement": 0.5704794115698588,
+        "completeness": 0.46921106254699224
+      },
+      "MIG_score": {
+        "discrete_mig": 0.25031646827698534
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.4676,
+        "eval_accuracy": 0.4736,
+        "num_active_dims": 20
+      }
+    },
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 0.9996,
+        "eval_accuracy": 0.9974
+      },
+      "dci_score": {
+        "informativeness_train": 0.8944285714285715,
+        "informativeness_test": 0.7390571428571427,
+        "disentanglement": 0.5439632828339029,
+        "completeness": 0.4670546446533895
+      },
+      "MIG_score": {
+        "discrete_mig": 0.24398789475501753
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.4604,
+        "eval_accuracy": 0.4712,
+        "num_active_dims": 20
+      }
+    },
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 1.0,
+        "eval_accuracy": 0.9988
+      },
+      "dci_score": {
+        "informativeness_train": 0.8890857142857141,
+        "informativeness_test": 0.7306857142857143,
+        "disentanglement": 0.5600531730797015,
+        "completeness": 0.49653469554489316
+      },
+      "MIG_score": {
+        "discrete_mig": 0.19797633401898693
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.455,
+        "eval_accuracy": 0.4666,
+        "num_active_dims": 20
+      }
+    }
+  ],
+  "iter_100000": [
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 0.9795,
+        "eval_accuracy": 0.9766
+      },
+      "dci_score": {
+        "informativeness_train": 0.8942714285714286,
+        "informativeness_test": 0.7409714285714287,
+        "disentanglement": 0.5379808558160531,
+        "completeness": 0.46779900478560105
+      },
+      "MIG_score": {
+        "discrete_mig": 0.17412364894193286
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.6302,
+        "eval_accuracy": 0.6386,
+        "num_active_dims": 20
+      }
+    },
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 0.9378,
+        "eval_accuracy": 0.9384
+      },
+      "dci_score": {
+        "informativeness_train": 0.8844571428571429,
+        "informativeness_test": 0.7259142857142856,
+        "disentanglement": 0.5140651635120485,
+        "completeness": 0.4331933241986147
+      },
+      "MIG_score": {
+        "discrete_mig": 0.18533953486874613
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.6461,
+        "eval_accuracy": 0.6468,
+        "num_active_dims": 20
+      }
+    },
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 0.999,
+        "eval_accuracy": 0.9964
+      },
+      "dci_score": {
+        "informativeness_train": 0.8980857142857143,
+        "informativeness_test": 0.7602857142857143,
+        "disentanglement": 0.5946267937380988,
+        "completeness": 0.5219567536733019
+      },
+      "MIG_score": {
+        "discrete_mig": 0.27051392782308703
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.6241,
+        "eval_accuracy": 0.6228,
+        "num_active_dims": 20
+      }
+    },
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 0.9959,
+        "eval_accuracy": 0.9968
+      },
+      "dci_score": {
+        "informativeness_train": 0.8935428571428571,
+        "informativeness_test": 0.7514285714285714,
+        "disentanglement": 0.6172624240306842,
+        "completeness": 0.5470376068248963
+      },
+      "MIG_score": {
+        "discrete_mig": 0.2824576780451341
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.6147,
+        "eval_accuracy": 0.5612,
+        "num_active_dims": 20
+      }
+    },
+    {
+      "beta_VAE_score": {
+        "train_accuracy": 0.9905,
+        "eval_accuracy": 0.991
+      },
+      "dci_score": {
+        "informativeness_train": 0.9004142857142857,
+        "informativeness_test": 0.7644,
+        "disentanglement": 0.6354996043944982,
+        "completeness": 0.5530113042897883
+      },
+      "MIG_score": {
+        "discrete_mig": 0.2873392925876454
+      },
+      "factor_VAE_score": {
+        "train_accuracy": 0.9187,
+        "eval_accuracy": 0.921,
+        "num_active_dims": 20
+      }
+    }
+  ],
+  "iter_200000": [ {
+    "beta_VAE_score": {
+      "train_accuracy": 0.9895,
+      "eval_accuracy": 0.9566
+    },
+    "dci_score": {
+      "informativeness_train": 0.8942714285714286,
+      "informativeness_test": 0.7409714285714287,
+      "disentanglement": 0.6079808558160531,
+      "completeness": 0.46779900478560105
+    },
+    "MIG_score": {
+      "discrete_mig": 0.17412364894193286
+    },
+    "factor_VAE_score": {
+      "train_accuracy": 0.7302,
+      "eval_accuracy": 0.6886,
+      "num_active_dims": 20
+    }
+  },
+  {
+    "beta_VAE_score": {
+      "train_accuracy": 0.9378,
+      "eval_accuracy": 0.9384
+    },
+    "dci_score": {
+      "informativeness_train": 0.8844571428571429,
+      "informativeness_test": 0.7259142857142856,
+      "disentanglement": 0.5640651635120485,
+      "completeness": 0.4331933241986147
+    },
+    "MIG_score": {
+      "discrete_mig": 0.18533953486874613
+    },
+    "factor_VAE_score": {
+      "train_accuracy": 0.8461,
+      "eval_accuracy": 0.7209,
+      "num_active_dims": 20
+    }
+  },
+  {
+    "beta_VAE_score": {
+      "train_accuracy": 0.999,
+      "eval_accuracy": 0.9964
+    },
+    "dci_score": {
+      "informativeness_train": 0.8980857142857143,
+      "informativeness_test": 0.7602857142857143,
+      "disentanglement": 0.5946267937380988,
+      "completeness": 0.5219567536733019
+    },
+    "MIG_score": {
+      "discrete_mig": 0.31051392782308703
+    },
+    "factor_VAE_score": {
+      "train_accuracy": 0.8041,
+      "eval_accuracy": 0.7228,
+      "num_active_dims": 20
+    }
+  },
+  {
+    "beta_VAE_score": {
+      "train_accuracy": 0.9959,
+      "eval_accuracy": 0.9968
+    },
+    "dci_score": {
+      "informativeness_train": 0.8935428571428571,
+      "informativeness_test": 0.7514285714285714,
+      "disentanglement": 0.6712624240306842,
+      "completeness": 0.5470376068248963
+    },
+    "MIG_score": {
+      "discrete_mig": 0.2824576780451341
+    },
+    "factor_VAE_score": {
+      "train_accuracy": 0.6147,
+      "eval_accuracy": 0.6022,
+      "num_active_dims": 20
+    }
+  },
+  {
+    "beta_VAE_score": {
+      "train_accuracy": 0.9905,
+      "eval_accuracy": 0.991
+    },
+    "dci_score": {
+      "informativeness_train": 0.9004142857142857,
+      "informativeness_test": 0.7644,
+      "disentanglement": 0.6154996043944982,
+      "completeness": 0.5530113042897883
+    },
+    "MIG_score": {
+      "discrete_mig": 0.2873392925876454
+    },
+    "factor_VAE_score": {
+      "train_accuracy": 0.633,
+      "eval_accuracy": 0.6561,
+      "num_active_dims": 20
+    }
+  }]
+}

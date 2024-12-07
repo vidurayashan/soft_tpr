@@ -1,0 +1,6 @@
+get_args.dataset = "cars3d"
+get_args.data_dir = "/media/bethia/aba5749c-a217-4cbb-8a86-2d95002d9fe21/Data"
+get_args.batch_size = 32
+get_args.num_steps = 10
+get_args.step_lr = 10
+get_args.image_energy = False

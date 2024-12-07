@@ -1,0 +1,6 @@
+get_args.dataset = "mpi_real"
+get_args.data_dir = "/g/data/po67/anonymous_cat/Data/"
+get_args.batch_size = 32
+get_args.num_steps = 10
+get_args.step_lr = 10
+get_args.image_energy = False
