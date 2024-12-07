@@ -18,29 +18,31 @@ Learning explicitly compositional representations has both theorised [1, 2] and 
 
 A predominant approach is that of disentanglement, where the underlying factors of variation (FoVs) are *isolated* into *distinct parts* (coloured blocks of RHS in Fig 1) of the representation, $\psi(x)$, which corresponds to the Jacobian disentanglement requirement of [13].
 <p align="center" width="100%">
-<img width="40%" alt="image" src="https://github.com/user-attachments/assets/93c743e9-ecde-4ea9-9b6d-8a9edb73e334">
+<img width="40%" alt="image" src="imgs/fovs_to_psi_x.png">
 </p>
 
 However, this enforces a fundamentally **symbolic** treatment of compositional structure, where the FoVs are discretely allocated to distinct representational slots, which are concatenated together to form a **string-like** compositional representation. 
 <p align="center" width="100%">
-<img width="20%" alt="image" src="https://github.com/user-attachments/assets/199d9e10-5dde-4f39-9625-e4509ac7e97d">
+<img width="20%" alt="image" src="imgs/symbolic_illustration.png">
 </p>
 
 We argue this symbolic approach of treating compositional structure is fundamentally incompatible with the *continuous* vector spaces of deep learning (please see paper, main body Section 1. paragraphs 4-5, and appendix A.3 for more details). 
 <p align="center" width="100%">
-<img width="55%" alt="image" src="https://github.com/user-attachments/assets/b57302cd-355b-4794-872a-4b099ef7f8f0">
+<img width="55%" alt="image" src="imgs/shortcomings_symbolic.png">
 </p>
 
 To align compositional structure with continuous vector spaces, we formulate a fundamentally **continuous** compositional representation. Such an approach *smoothly interweaves* FoVs into $\psi(x)$, similar to the *continuous superimposition* of multiple waves into an aggregate waveform. 
 <p align="center" width="100%">
-<img width="30%" alt="image" src="https://github.com/user-attachments/assets/0a8cfb09-4628-42ad-a2de-309e045e50b3">
+<img width="30%" alt="image" src="imgs/continuous_illustration.png">
 </p>
+
 Our approach, **Soft TPR**, builds upon Smolensky's established Tensor Product Representation (TPR) [3], but provides enhanced ease of learning and representational flexibility compared to the conventional TPR. 
 
 We additionally introduce **Soft TPR Autoencoder**, a theoretically-principled method to learn Soft TPRs that learns elements of the Soft TPR form by leveraging the mathematical properties of the Soft TPR/TPR framework. 
 
-![image](https://github.com/user-attachments/assets/b07d8eba-35ea-4b3c-b550-73a6db9fb4d8)
-
+<p align="center" width="100%">
+<img width="30%" alt="image" src="imgs/soft_tpr_framework.png">
+</p>
 
 Our results empiricially suggest that the enhanced vector space alignment produced by Soft TPRs is broadly beneficial for DL models (both representation learners & downstream models). In particular, Soft TPRs are (please see our main paper and Appendix C for full results): 
 
