@@ -18,7 +18,7 @@ Learning explicitly compositional representations has both theorised [1, 2] and 
 
 A predominant approach is that of disentanglement, where the underlying factors of variation (FoVs) are *isolated* into *distinct parts* (coloured blocks of RHS in Fig 1) of the representation, $\psi(x)$, which corresponds to the Jacobian disentanglement requirement of [13].
 <p align="center" width="100%">
-<img width="40%" alt="image" src="imgs/fovs_to_psi_x.png">
+<img width="55%" alt="image" src="imgs/fovs_to_psi_x.png">
 </p>
 
 However, this enforces a fundamentally **symbolic** treatment of compositional structure, where the FoVs are discretely allocated to distinct representational slots, which are concatenated together to form a **string-like** compositional representation. 
@@ -28,7 +28,7 @@ However, this enforces a fundamentally **symbolic** treatment of compositional s
 
 We argue this symbolic approach of treating compositional structure is fundamentally incompatible with the *continuous* vector spaces of deep learning (please see paper, main body Section 1. paragraphs 4-5, and appendix A.3 for more details). 
 <p align="center" width="100%">
-<img width="55%" alt="image" src="imgs/shortcomings_symbolic.png">
+<img width="75%" alt="image" src="imgs/shortcomings_symbolic.png">
 </p>
 
 To align compositional structure with continuous vector spaces, we formulate a fundamentally **continuous** compositional representation. Such an approach *smoothly interweaves* FoVs into $\psi(x)$, similar to the *continuous superimposition* of multiple waves into an aggregate waveform. 
@@ -41,7 +41,7 @@ Our approach, **Soft TPR**, builds upon Smolensky's established Tensor Product R
 We additionally introduce **Soft TPR Autoencoder**, a theoretically-principled method to learn Soft TPRs that learns elements of the Soft TPR form by leveraging the mathematical properties of the Soft TPR/TPR framework. 
 
 <p align="center" width="100%">
-<img width="30%" alt="image" src="imgs/soft_tpr_framework.png">
+<img width="110%" alt="image" src="imgs/soft_tpr_framework.png">
 </p>
 
 Our results empiricially suggest that the enhanced vector space alignment produced by Soft TPRs is broadly beneficial for DL models (both representation learners & downstream models). In particular, Soft TPRs are (please see our main paper and Appendix C for full results): 
@@ -157,3 +157,6 @@ For evaluation and baseline impleemntation, this code has built upon original im
 | Yang et al. | [Github Repo](https://github.com/ThomasMrY/VCT) | Visual Concepts Tokenization, NeurIPS 2022 | Implementation of VCT |
 | Du et al. | [Github Repo](https://github.com/yilundu/comet) | Unsupervised Learning of Compositional Energy Concepts, NeurIPS 2021 | Implementation of COMET |
 | Locatello et al. | [Github Repo](https://github.com/google-research/disentanglement_lib/tree/master/disentanglement_lib) | Challenging Common Assumptions in the Unsupervised Learning of Disentangled Representations, ICML 2019 | Evaluation |
+
+### 4.4 Erratum
+Please note, as stated in the Arvix and final published paper, there is a small error in the [OpenReview Author Rebuttal](https://openreview.net/forum?id=oEVsxVdush&noteId=GiOPkcNVts) in L16 under section 1) *Incompatibility between disentangled representations and deep learning’s continuous vector spaces*, where the tensor product is mistakenly taken over $\psi_{col}(purple) \otimes  \psi_{sh}(square)$ to produce the representation, instead of computing $\xi_{F}(purple) \otimes \xi_{R}(col) + \xi_{F}(square) \otimes \xi_{R}(sh)$, but the conclusion remains exactly the same. Note that $\psi_{col}(purple)= \xi_{F}(purple) \otimes \xi_{R}(col)$ and $\psi_{sh}(square)= \xi_{F}(square) \otimes \xi_{F}(sh)$ should *both* be 4-dimensional, *not* 2-dimensional. The author was probably delirious at the time of writing. 
