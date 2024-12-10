@@ -2,7 +2,7 @@
 
 Code for *Soft Tensor Product Representations for Fully Continuous, Compositional Visual Representations* to appear in the [38th Annual Conference on Neural Information Processing Systems](https://neurips.cc/Conferences/2024) (NeurIPS 2024). 
 
-| 📖 [Arvix Preprint](<i>coming soon</i>) | 🧵 [OpenReview](https://openreview.net/forum?id=oEVsxVdush) | 🪧 [Poster](https://neurips.cc/virtual/2024/poster/93635) | 🛝 [Slides](https://neurips.cc/media/neurips-2024/Slides/93635.pdf) |
+| 📖 [Arvix Preprint](https://www.arxiv.org/pdf/2412.04671) | 🧵 [OpenReview](https://openreview.net/forum?id=oEVsxVdush) | 🪧 [Poster](https://neurips.cc/virtual/2024/poster/93635) | 🛝 [Slides](https://neurips.cc/media/neurips-2024/Slides/93635.pdf) |
 | - | - | - | - | 
 
 ## Table of Contents
