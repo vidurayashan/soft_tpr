@@ -594,13 +594,14 @@ class Shapes3D(DisLibDataset):
     fname = '3dshapes.h5'
 
     def __init__(self,
-                 path='/media/bethia/aba5749c-a217-4cbb-8a86-2d95002d9fe21/Data/datasets/',
+                 path='C:\\Users\\21361535\\Downloads\\soft_tpr_datasets',
                  **vision_dataset_kwargs):
         factor_names = [
             'floor color', 'wall color', 'object color', 'object size',
             'object type', 'azimuth']
 
         file_path = os.path.join(path, 'shapes3d', self.fname)
+        print(f'FILE PATH IS {file_path}')
         if not os.path.exists(file_path):
             raise FileNotFoundError(f'{file_path} not found')
             #self.download(path)

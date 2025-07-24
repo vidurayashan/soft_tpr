@@ -3,6 +3,11 @@ import torch
 import torch.nn.functional as F 
 import logging 
 import numpy as np
+import sys
+import os
+
+# Add the root directory to the path so we can import from src
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
 
 from src.shared.utils import get_filename
 from src.shared.utils import set_seed
@@ -27,7 +32,7 @@ parser.add_argument('--gadi', action='store_true',
 
 # 1. DATA DIRECTORIES
 parser.add_argument('--data_dir', type=str, 
-                    default='/media/bethia/aba5749c-a217-4cbb-8a86-2d95002d9fe21/Data/datasets/', 
+                    default='C:\\Users\\21361535\\Downloads\\soft_tpr_datasets', 
                     help='Location of datasets')
 
 # 2. DATASET 
@@ -128,7 +133,7 @@ parser.add_argument('--eval_frequency', type=int, default=10,
 # 5.3 Saving
 parser.add_argument('--save_ae', action='store_true', 
                     help='If specified, the trained autoencoder model is saved')
-parser.add_argument('--save_dir', type=str, default='/media/bethia/F6D2E647D2E60C251/trained_cleaning/1.62/', 
+parser.add_argument('--save_dir', type=str, default='C:\\Users\\21361535\\Downloads\\soft_tpr_datasets\\output', 
                     help='Specifies the directory in which the trained autoencoder model is saved into')
 parser.add_argument('--checkpoint_freq', default=50000, type=int,
                     help='Frequency at which autoencoder saved')

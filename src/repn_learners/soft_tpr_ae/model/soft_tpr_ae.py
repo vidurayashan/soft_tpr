@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.linalg as LA 
 import torch.nn.functional as F 
+import torch.fft
 from typing import Dict
 
 from src.repn_learners.soft_tpr_ae.model.base_ae import AbstractAE
@@ -10,6 +11,8 @@ from src.repn_learners.soft_tpr_ae.optim.loss import bce_recon_loss_fn, mse_reco
 from src.repn_learners.soft_tpr_ae.utils import init_embeddings, weights_init
 from src.repn_learners.soft_tpr_ae.model.nearest_embed import NearestEmbed
 from src.repn_learners.soft_tpr_ae.model.base_tpr_ae import BaseTPREncoder
+from src.repn_learners.soft_tpr_ae.model.base_tpr_ae import vsa_binding, vsa_unbinding
+from src.repn_learners.soft_tpr_ae.utils import weights_init
 
 class Quantiser(nn.Module): 
     """ Quantiser module within the TPR Autoencoder's TPR Decoder (rectangular block in Fig 2 of the 
@@ -111,30 +114,45 @@ class SoftTPRAutoencoder(AbstractAE):
                  weakly_supervised: bool, 
                  recon_loss_fn: str) -> None: 
         super().__init__()
-        self.role_embeddings = nn.Embedding(num_embeddings=n_roles, 
-                                                 embedding_dim=role_embed_dim).requires_grad_(not freeze_role_embeddings)
-        self.quantiser = Quantiser(n_fillers=n_fillers, filler_embed_dim=filler_embed_dim, 
-                                   init_embeddings_orth=init_fillers_orth,
-                                   lambdas_loss={VQ_PENALTY: lambdas_loss[VQ_PENALTY], 
-                                                 COMMITMENT_PENALTY: lambdas_loss[COMMITMENT_PENALTY],
-                                                 ORTH_PENALTY_FILLER: lambdas_loss[ORTH_PENALTY_FILLER]})
-        
-        self.n_roles = n_roles 
-        self.n_fillers = n_fillers
+        assert role_embed_dim == filler_embed_dim, "For VSA binding, role and filler dimensions must match"
+        self.embed_dim = role_embed_dim
+        self.n_roles = n_roles
         self.filler_embed_dim = filler_embed_dim
         self.role_embed_dim = role_embed_dim
-        self.freeze_role_embeddings = freeze_role_embeddings
+        
+        self.encoder = encoder
+        self.decoder = decoder
+        
+        # Keep role embeddings as Embedding for compatibility
+        self.role_embeddings = nn.Embedding(num_embeddings=n_roles, embedding_dim=self.embed_dim)
+        if freeze_role_embeddings:
+            for param in self.role_embeddings.parameters():
+                param.requires_grad = False
+        
+        # Add VSA binding layer to convert encoder output to bound VSA representation
+        # This layer takes (N, D_F, D_R) and outputs (N, D) bound representation
+        encoder_output_dim = role_embed_dim * filler_embed_dim  # D_F * D_R
+        self.vsa_binding_layer = nn.Linear(encoder_output_dim, self.embed_dim)
+        
+        self.quantiser = Quantiser(n_fillers=n_fillers,
+                                  filler_embed_dim=filler_embed_dim,
+                                  init_embeddings_orth=init_fillers_orth,
+                                  lambdas_loss={VQ_PENALTY: lambdas_loss[VQ_PENALTY], 
+                                                COMMITMENT_PENALTY: lambdas_loss[COMMITMENT_PENALTY],
+                                                ORTH_PENALTY_FILLER: lambdas_loss[ORTH_PENALTY_FILLER]})
+        
+        # Flattening layer to make representations 1D
+        self.flatten = nn.Flatten()
+        
+        self.weakly_supervised = weakly_supervised
+        self.recon_loss_fn = recon_loss_fn
         self.lambda_recon = lambdas_loss[RECON_PENALTY]
         self.lambda_orth_penalty_role = lambdas_loss[ORTH_PENALTY_ROLE]
         self.lambda_ws_recon = lambdas_loss[WS_RECON_LOSS_PENALTY]
         self.lambda_ws_r_embed_ce = lambdas_loss[WS_DIS_PENALTY]
-        self.weakly_supervised = weakly_supervised
-        self.recon_loss_fn = recon_loss_fn
-        
-        self.encoder = encoder 
-        self.decoder = decoder 
-        self.embed_dim = role_embed_dim * filler_embed_dim
+        self.freeze_role_embeddings = freeze_role_embeddings
 
+        # Initialize embeddings
         if freeze_role_embeddings: 
             init_embeddings(init_orth=True, weights=self.role_embeddings.weight)
         else: 
@@ -160,7 +178,16 @@ class SoftTPRAutoencoder(AbstractAE):
         return self.decoder(x)
 
     def encode(self, x: torch.Tensor) -> torch.Tensor: 
-        return self.encoder(x)
+        # Original encoder output: (N, D_F, D_R)
+        encoder_output = self.encoder(x)
+        
+        # Flatten the TPR matrix: (N, D_F, D_R) -> (N, D_F*D_R)
+        flattened = encoder_output.view(encoder_output.shape[0], -1)
+        
+        # Apply VSA binding layer to get bound representation: (N, D_F*D_R) -> (N, D)
+        bound_vsa = self.vsa_binding_layer(flattened)
+        
+        return bound_vsa
     
     def repn_fn(self, x: torch.Tensor, key: str=QUANTISED_FILLERS) -> torch.Tensor: 
         """ 
@@ -204,7 +231,7 @@ class SoftTPRAutoencoder(AbstractAE):
         if key == FILLER_IDXS: 
             return quantised_out[FILLER_IDXS].to(torch.float32)                                 # (N, N_{R})
         if key == Z_SOFT_TPR: 
-            return z.view(-1, self.embed_dim)                                                   # soft approximation to a TPR (N, D_{F}*D_{R})
+            return z  # z is now the bound VSA representation (N, D)
         if key == Z_TPR or TPR_BINDINGS in key: 
             constructor_out = self.construct(quantised_out[QUANTISED_FILLERS_SG])
             if key == Z_TPR: 
@@ -227,96 +254,94 @@ class SoftTPRAutoencoder(AbstractAE):
                 FILLER_IDXS: filler_idxs}
         
     def unbind(self, z: torch.Tensor) -> torch.Tensor:
-        """ 
-        Performs unbinding operation 
-        Note that as per the 'Unbinding' section of B.3.1. If the role embedding matrix, $M_{\psi_{R}}$ is semi-orthogonal,
-        then, it is left-invertible, and the left inverse is the transpose of $M_{\psi_{R}}$. Taking the inner product
-        between the left inverse (transpose) of $M_{\psi_{R}}$ and $z$ recovers the soft fillers, as per Eqs 3-4 in the main paper. 
-        
-        Inputs: 
-            z (torch.Tensor)                        : soft TPR of dimension (N, D_{F}, D_{R})
-        Returns: 
-            torch.Tensor                            : tensor of dimension (N, N_{R}, D_{F}) containing the unbound soft fillers
-                                                      for each data point
-        """ 
-        soft_fillers = torch.bmm(z, self.role_embeddings.weight.unsqueeze(0).expand(z.shape[0], -1, -1).permute(0, 2, 1))       # (N, D_{F}, D_{R}) @ (N, N_{R}, D_{R}) -> (N, D_{F}, N_{R})
-        soft_fillers = soft_fillers.permute(0, 2, 1).contiguous()                                                               # -> (N, N_{R}, D_{F})
-        return soft_fillers
-    
-    def construct(self, quantised_fillers: torch.Tensor) -> Dict: 
-        """ 
-        Apply TPR construction operation to the quantised fillers and the role embeddings 
-        to retrieve an explicit TPR. Also returns the TPR bindings 
-        
-        Inputs: 
-            quantised_fillers (torch.Tensor): a tensor of dimension (N, N_{R}, D_{F}) where 
-                quantised_fillers[:,i] contains the $i$-th role's corresponding $D_{F}$-dimensional bound filler
-                for each data point
-        
-        Returns: 
-            Dict {str: torch.Tensor}: a dictionary containing:
-                the explicit TPR, a tensor of dimension (N, D_{F}*D_{R}),
-                the TPR bindings, a tensor of dimension (N, N_{R}, D_{F}, D_{R})
         """
-        batched_roles = self.role_embeddings.weight.unsqueeze(0).expand(quantised_fillers.shape[0], -1, -1)
-        tpr_bindings = torch.einsum('bsf,bsr->bsfr', quantised_fillers, batched_roles)
-        z_tpr = tpr_bindings.sum(dim=1).view(-1, self.embed_dim)
-        return {Z_TPR: z_tpr,
-                TPR_BINDINGS: tpr_bindings}
+        Performs VSA unbinding operation using inverse permutations
+        
+        Inputs:
+            z (torch.Tensor): bound VSA representation of dimension (N, D)
+        Returns:
+            torch.Tensor: tensor of dimension (N, N_{R}, D) containing the unbound fillers
+        """
+        batch_size = z.shape[0]
+        
+        # z should now be (N, D) - a bound VSA representation
+        assert len(z.shape) == 2 and z.shape[1] == self.embed_dim, f"Expected bound VSA shape (N, {self.embed_dim}), got {z.shape}"
+        
+        # Generate role permutations from role embeddings
+        role_perms = torch.argsort(self.role_embeddings.weight, dim=-1)  # (N_R, D)
+        # Expand z to match roles and expand role_perms for batch
+        z_expanded = z.unsqueeze(1).expand(-1, self.n_roles, -1)  # (N, N_R, D)
+        role_perms_expanded = role_perms.unsqueeze(0).expand(batch_size, -1, -1)  # (N, N_R, D)
+        # Unbind using VSA permutation
+        soft_fillers = vsa_unbinding(z_expanded, role_perms_expanded)  # (N, N_R, D)
+        return soft_fillers
+
+    def construct(self, quantised_fillers: torch.Tensor) -> Dict:
+        """
+        Apply VSA binding to the quantised fillers and roles
+        
+        Inputs:
+            quantised_fillers (torch.Tensor): tensor of dimension (N, N_{R}, D)
+        Returns:
+            Dict {str: torch.Tensor}: containing:
+                the explicit VSA representation (N, D),
+                the VSA bindings (N, N_{R}, D)
+        """
+        batch_size = quantised_fillers.shape[0]
+        # Generate role permutations
+        role_perms = torch.argsort(self.role_embeddings.weight, dim=-1)  # (N_R, D)
+        # Expand for batch
+        role_perms = role_perms.unsqueeze(0).expand(batch_size, -1, -1)  # (N, N_R, D)
+        
+        # Bind using VSA permutation
+        vsa_bindings = vsa_binding(quantised_fillers, role_perms)  # (N, N_R, D)
+        # Sum across roles to get final representation
+        z_vsa = vsa_bindings.sum(dim=1)  # (N, D)
+        
+        return {Z_TPR: z_vsa, TPR_BINDINGS: vsa_bindings}
     
     def get_ws_out(self, quantised_out: Dict, 
                         x: torch.Tensor, gt_factor_classes: torch.Tensor) -> torch.Tensor: 
         """ 
-        Computes all outputs associated with weak supervision as explained in the main paper. 
-        Computes the weakly supervised reconstruction loss term and the weakly supervised cross entropy term corresponding to the last 2 terms in Eq 7
-        (Recall that each pair of images, $(x, x')$ differ in the FoV *value* for only 1 FoV type. I.e., there is 1 difference
-        between the pair of images)
-        
-        Inputs:
-            quantised_fillers_sg (torch.Tensor)     : tensor of dimension (N, N_{R}, D_{F}) representing quantised fillers (note that the quantised fillers themselves are 
-                                                    FIXED in all other operations other than the VQ-VAE quantisation-based loss applied by the quantiser module)
-            tpr_bindings (torch.Tensor)             : tensor of dimension (N, N_{R}, D_{F}*D_{R}) representing the role-filler embedding bindings for each data point
-            x (torch.Tensor)                        : tensor of dimension (N, C, H, W)
-            gt_factor_classes (torch.Tensor)        : tensor of dimension (N, gt_N_{R}) where gt_factor_classes[i, k] contains an integer ID denoting the identity of the 
-                                                    $i$-th datapoint's filler bound to role $k$, and gt_N_{R} denotes the GT number of roles in the dataset
-        """ 
+        Computes all outputs associated with weak supervision for VSA binding
+        """
         
         recon_loss = 0 
         ws_ce_loss = 0 
 
-        quantised_fillers_sg = quantised_out[QUANTISED_FILLERS_SG]                                                      # (N, N_{R}, D_{F}) (note that N = 2*N_{B}, where N_{B} denotes the batch-size, as inputs are paired)
-        tpr_bindings = self.construct(quantised_fillers_sg)[TPR_BINDINGS].detach() 
+        quantised_fillers_sg = quantised_out[QUANTISED_FILLERS_SG]  # (N, N_{R}, D)
+        vsa_bindings = self.construct(quantised_fillers_sg)[TPR_BINDINGS].detach()  # (N, N_{R}, D)
 
-        quantised_fillers_sg = torch.stack(torch.chunk(quantised_fillers_sg, 2, 0), dim=1)                              # (N_{B}, 2, N_{R}, D_{F})
+        quantised_fillers_sg = torch.stack(torch.chunk(quantised_fillers_sg, 2, 0), dim=1)  # (N_{B}, 2, N_{R}, D)
         N = quantised_fillers_sg.shape[0]
-        dist = LA.vector_norm(quantised_fillers_sg[:, 0] - quantised_fillers_sg[:, 1], 2, dim=-1) + 1e-8                # (N_{B}, N_{R}, D_{F}) -> (N_{B}, N_{R}, 1)
+        dist = LA.vector_norm(quantised_fillers_sg[:, 0] - quantised_fillers_sg[:, 1], 2, dim=-1) + 1e-8  # (N_{B}, N_{R})
         gt1, gt2 = torch.chunk(gt_factor_classes, 2, 0)
-        one_hot = (gt1 != gt2).to(torch.float16) # (N_{B}, N_{R}) 
+        one_hot = (gt1 != gt2).to(torch.float16)  # (N_{B}, N_{R}) 
         
-        if one_hot.shape != dist.shape:                                                                                 # (gt_N_{R}) != (N_{R'})
+        if one_hot.shape != dist.shape:  # (gt_N_{R}) != (N_{R'})
             diff = dist.shape[1] - one_hot.shape[1]
             one_hot = torch.concatenate([one_hot, torch.zeros(size=(one_hot.shape[0], diff)).cuda()], dim=-1)
             
         ws_ce_loss = F.cross_entropy(dist, one_hot)
         
-        mask = F.gumbel_softmax(dist, dim=1, hard=True).unsqueeze(-1).expand(-1, -1, self.filler_embed_dim).to(bool)    # (N_{B}, N_{R})
-        tpr_bindings_split = torch.stack(torch.chunk(tpr_bindings, 2, 0), dim=1)                                        # (N_{B}, 2, N_{R}, D_{F}, D_{R})
+        mask = F.gumbel_softmax(dist, dim=1, hard=True).unsqueeze(-1).expand(-1, -1, self.embed_dim).to(bool)  # (N_{B}, N_{R}, D)
+        vsa_bindings_split = torch.stack(torch.chunk(vsa_bindings, 2, 0), dim=1)  # (N_{B}, 2, N_{R}, D)
         
-        mask_for_tpr = mask.unsqueeze(-1).expand(-1, -1, -1, self.role_embed_dim)
-        temp0 = tpr_bindings_split[:, 0][mask_for_tpr].reshape(N, self.filler_embed_dim, self.role_embed_dim) 
-        temp1 = tpr_bindings_split[:, 1][mask_for_tpr].reshape(N, self.filler_embed_dim, self.role_embed_dim)
+        # Swap the selected bindings
+        temp0 = vsa_bindings_split[:, 0][mask].reshape(N, self.embed_dim) 
+        temp1 = vsa_bindings_split[:, 1][mask].reshape(N, self.embed_dim)
         
-        tpr_bindings_split[:, 0][mask_for_tpr] = temp1.view(-1)
-        tpr_bindings_split[:, 1][mask_for_tpr] = temp0.view(-1)
-        swapped_bindings = tpr_bindings_split 
-        tpr_bindings_split = torch.concatenate(torch.unbind(tpr_bindings_split, dim=1), dim=0)                          # (2*N_{B}, N_{R}, D_{F}, D_{R})
-        swapped_tpr = tpr_bindings_split.sum(dim=1).view(-1, self.embed_dim)
+        vsa_bindings_split[:, 0][mask] = temp1.view(-1)
+        vsa_bindings_split[:, 1][mask] = temp0.view(-1)
+        swapped_bindings = vsa_bindings_split 
+        vsa_bindings_split = torch.concatenate(torch.unbind(vsa_bindings_split, dim=1), dim=0)  # (2*N_{B}, N_{R}, D)
+        swapped_vsa = vsa_bindings_split.sum(dim=1)  # (2*N_{B}, D)
 
-        x_hat = self.decode(swapped_tpr)
+        x_hat = self.decode(swapped_vsa)
         x1, x2 = torch.chunk(x, 2, dim=0)
         
         with torch.no_grad():
-            mse_recon_loss = mse_recon_loss_fn(x_hat, torch.concatenate([x2, x1], dim=0), logging=True).detach()                 # for logging purposes
+            mse_recon_loss = mse_recon_loss_fn(x_hat, torch.concatenate([x2, x1], dim=0), logging=True).detach()
             bce_recon_loss = bce_recon_loss_fn(x_hat, torch.concatenate([x2, x1], dim=0), logging=True).detach()
         
         if self.recon_loss_fn == 'mse': 
@@ -328,24 +353,23 @@ class SoftTPRAutoencoder(AbstractAE):
                          f'{WEAKLY_SUPERVISED}_{BCE_RECON_LOSS}': bce_recon_loss,
                          f'{WEAKLY_SUPERVISED}_{RECON_LOSS}': recon_loss,
                          f'{WEAKLY_SUPERVISED}_{CE_LOSS}': ws_ce_loss}, 
-                'state': {'swapped_tpr': swapped_tpr, 
+                'state': {'swapped_tpr': swapped_vsa, 
                 f'{WEAKLY_SUPERVISED}_argmax': torch.argwhere(mask == 1)[:, 1], 
                 'swapped_bindings': swapped_bindings,
-                f'{WEAKLY_SUPERVISED}_x_hat': x_hat}}  
+                f'{WEAKLY_SUPERVISED}_x_hat': x_hat}}
         
     def forward(self, x: torch.Tensor, gt_factor_classes: torch.Tensor) -> Dict: 
-
-        z = self.encode(x)                                                                                              # (N, D_{F}, D_{R})
+        z = self.encode(x)  # This might be (N, D_F, D_R) or (N, D_F*D_R)
         soft_fillers = self.unbind(z) 
         quantiser_out = self.quantiser(soft_fillers)
         quantised_out, quantiser_loss = quantiser_out['state'], quantiser_out['loss']
         
         quantised_fillers_sg, filler_idxs = quantised_out[QUANTISED_FILLERS_SG], quantised_out[FILLER_IDXS]
         construct_output = self.construct(quantised_fillers_sg)
-        z_tpr = construct_output[Z_TPR]
+        z_vsa = construct_output[Z_TPR]
         
-        x_hat = self.decode(z_tpr)
-        state = self.make_state(x=x, x_hat=x_hat, z=z, z_tpr=z_tpr, 
+        x_hat = self.decode(z_vsa)
+        state = self.make_state(x=x, x_hat=x_hat, z=z, z_tpr=z_vsa, 
                                 quantised_fillers=quantised_fillers_sg, 
                                 soft_fillers=soft_fillers, 
                                 filler_idxs=filler_idxs)

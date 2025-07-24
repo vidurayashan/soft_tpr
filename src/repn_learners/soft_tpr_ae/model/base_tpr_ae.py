@@ -6,6 +6,54 @@ from torch import linalg as LA
 from src.shared.constants import *
 from src.repn_learners.soft_tpr_ae.utils import init_embeddings
 
+def vsa_binding(filler: torch.Tensor, role: torch.Tensor) -> torch.Tensor:
+    """
+    Bind a filler vector using a role vector as a permutation index.
+    Args:
+        filler (torch.Tensor): Vector to be permuted (batch_size, n_roles, dim)
+        role (torch.Tensor): Permutation indices (batch_size, n_roles, dim)
+    Returns:
+        torch.Tensor: Bound vector (filler permuted by role)
+    """
+    # Ensure role indices are valid permutations
+    role = role % filler.shape[-1]  # Ensure indices are within bounds
+    role = role.to(torch.long)
+    # Handle batched operations
+    batch_size, n_roles, dim = filler.shape
+    
+    # Use advanced indexing to perform the permutation
+    result = torch.zeros_like(filler)
+    for b in range(batch_size):
+        for r in range(n_roles):
+            result[b, r, :] = filler[b, r, role[b, r, :]]
+    
+    return result
+
+def vsa_unbinding(bound: torch.Tensor, role: torch.Tensor) -> torch.Tensor:
+    """
+    Unbind a previously bound vector using the inverse of the role permutation.
+    Args:
+        bound (torch.Tensor): The permuted (bound) vector (batch_size, n_roles, dim)
+        role (torch.Tensor): The original role permutation indices (batch_size, n_roles, dim)
+    Returns:
+        torch.Tensor: Recovered original filler vector
+    """
+    # Ensure role indices are valid
+    role = role % bound.shape[-1]
+    role = role.to(torch.long)
+    batch_size, n_roles, dim = bound.shape
+    
+    # Create inverse permutation and apply it
+    result = torch.zeros_like(bound)
+    for b in range(batch_size):
+        for r in range(n_roles):
+            # Create inverse permutation
+            inverse_perm = torch.zeros(dim, dtype=torch.long, device=bound.device)
+            inverse_perm[role[b, r, :]] = torch.arange(dim, device=bound.device)
+            result[b, r, :] = bound[b, r, inverse_perm]
+    
+    return result
+
 class BaseTPREncoder(nn.Module): 
     def __init__(self, n_roles: int, n_fillers: int, role_embed_dim: int, 
                  filler_embed_dim: int, use_concatenated_rep: bool, 
@@ -14,17 +62,24 @@ class BaseTPREncoder(nn.Module):
                  init_fillers_orth: bool=False,
                  fixed_roles: bool=False) -> None: 
         super().__init__() 
+        assert role_embed_dim == filler_embed_dim, "For VSA binding, role and filler dimensions must match"
+        self.embed_dim = role_embed_dim
+        
         if fixed_roles: 
             init_roles_orth=True
-        self.role_embeddings = nn.Embedding(num_embeddings=n_roles, embedding_dim=role_embed_dim).requires_grad_(not fixed_roles)
-        self.filler_embeddings = nn.Embedding(num_embeddings=n_fillers, embedding_dim=filler_embed_dim)
+        # Keep role embeddings as Embedding for compatibility but ensure same dimension
+        self.role_embeddings = nn.Embedding(num_embeddings=n_roles, embedding_dim=self.embed_dim).requires_grad_(not fixed_roles)
+        self.filler_embeddings = nn.Embedding(num_embeddings=n_fillers, embedding_dim=self.embed_dim)
         self.use_concatenated_rep = use_concatenated_rep
         self.lambdas_reg = lambdas_reg
 
+        # Flattening layer to make output 1D
+        self.flatten = nn.Flatten()
+        
         if self.use_concatenated_rep: 
-            self.rep_dim = role_embed_dim * filler_embed_dim * n_roles
+            self.rep_dim = self.embed_dim * n_roles
         else: 
-            self.rep_dim = role_embed_dim * filler_embed_dim
+            self.rep_dim = self.embed_dim
         
         self.init_weights(init_fillers_orth=init_fillers_orth, init_roles_orth=init_roles_orth)
             
@@ -35,37 +90,41 @@ class BaseTPREncoder(nn.Module):
             'filler_embed_dim': filler_embed_dim, 
             'use_concatenated_rep': self.use_concatenated_rep, 
             'lambdas_reg': self.lambdas_reg, 
-            'init_roles_orth': False,  # will be overriden when model params loaded
+            'init_roles_orth': False,
             'init_fillers_orth': False,
             'fixed_roles': fixed_roles
         }
         
     def init_weights(self, init_fillers_orth: bool, init_roles_orth: bool): 
-        init_embeddings(init_fillers_orth, self.filler_embeddings.weight)
+        # Initialize role embeddings to generate valid permutation-like patterns
         init_embeddings(init_roles_orth, self.role_embeddings.weight)
+        init_embeddings(init_fillers_orth, self.filler_embeddings.weight)
     
     def forward(self, batched_roles: torch.Tensor, batched_fillers: torch.Tensor) -> Dict: 
         """ 
         Args: 
-            batched_roles (torch.Tensor) of dimension (N_{B}, N_{R}, D_{R})
-            batched_fillers (torch.Tensor) of dimension (N_{B}, N_{R}, D_{F})
-        Receives a batch of roles and corresponding bound fillers and produces TPR bindings 
-        The binding of filler f_{i} \in \mathbb{R}^{D_{F}} and a role r_{i} \in \mathbb{R}^{D_{R}} 
-        is defined as the tensor product of the filler and role i.e. f_{i} \otimes r_{i} \in \mathbb{R}^{D_{F} \times D_{R}}
+            batched_roles (torch.Tensor) of dimension (N_{B}, N_{R}, D)
+            batched_fillers (torch.Tensor) of dimension (N_{B}, N_{R}, D)
+        Receives a batch of roles and corresponding bound fillers and produces VSA bindings
+        The binding of filler f_{i} and a role r_{i} is defined as the permutation of f_{i} by r_{i}
         """
-        assert len(batched_roles.shape) == 3 and len(batched_fillers.shape) == 3, (f'Expected batched roles' + 
-        f'and batched fillers.\n Actual roles: {batched_roles.shape}\tActual fillers: {batched_fillers.shape}\n')
-        
+        assert batched_roles.shape == batched_fillers.shape, 'Role and filler shapes must match for VSA binding'
         N = batched_roles.shape[0]
-        n_roles = self.role_embeddings.weight.shape[0]
-        tensor_prod_bindings = torch.einsum('bsf,bsr->bsfr', batched_fillers, batched_roles) # (N_{B}, N_{R}, D_{F}, D_{R})
+        n_roles = batched_roles.shape[1]
         
-        if self.use_concatenated_rep: 
-            z_rep = tensor_prod_bindings.view(N, -1) # (N_{B}, N_{R}*D_{F}*D_{R})
-        else: 
-            z_rep = tensor_prod_bindings.sum(dim=1).view(N, -1) # (N_{B}, N_{R}, D_{F}, D_{R}) -> (N_{B}, D_{F}, D_{R}) -> (N_{B}, D_{F}*D_{R})
+        # Generate role permutations (convert continuous values to permutation indices)
+        role_perms = torch.argsort(batched_roles, dim=-1)
         
-        orth_penalty_role = self.get_semi_orth_penalty(self.role_embeddings.weight.t()) # (N_{B}, D_{R}, N_{R})
+        # Bind using VSA permutation
+        vsa_bindings = vsa_binding(batched_fillers, role_perms)  # (N, n_roles, D)
+        
+        if self.use_concatenated_rep:
+            z_rep = self.flatten(vsa_bindings)  # (N, n_roles*D)
+        else:
+            z_rep = vsa_bindings.sum(dim=1)  # (N, D)
+        
+        # The rest remains similar but with updated shapes
+        orth_penalty_role = self.get_semi_orth_penalty(self.role_embeddings.weight.t())
         role_rank = self.get_rank(self.role_embeddings.weight.t())
         orth_penalty_filler = self.get_semi_orth_penalty(self.filler_embeddings.weight.t())
         filler_rank = self.get_rank(self.filler_embeddings.weight.t())
@@ -76,7 +135,7 @@ class BaseTPREncoder(nn.Module):
         
         encoder_loss = torch.sum(coeffs * penalties)
         
-        return {'rep': z_rep, 'bindings': tensor_prod_bindings.reshape(N, n_roles, -1),
+        return {'rep': z_rep, 'bindings': vsa_bindings,
                 'encoder_logs': {'encoder_loss': encoder_loss, 
                                  ORTH_PENALTY_ROLE: orth_penalty_role, 
                                  ORTH_PENALTY_FILLER: orth_penalty_filler, 
