@@ -114,8 +114,9 @@ class SoftTPRAutoencoder(AbstractAE):
                  weakly_supervised: bool, 
                  recon_loss_fn: str) -> None: 
         super().__init__()
-        assert role_embed_dim == filler_embed_dim, "For VSA binding, role and filler dimensions must match"
-        self.embed_dim = role_embed_dim
+        # Remove the assertion - we'll handle different dimensions in VSA space
+        # Choose VSA dimension as the larger of the two for better representation capacity
+        self.vsa_dim = max(role_embed_dim, filler_embed_dim)
         self.n_roles = n_roles
         self.filler_embed_dim = filler_embed_dim
         self.role_embed_dim = role_embed_dim
@@ -123,16 +124,22 @@ class SoftTPRAutoencoder(AbstractAE):
         self.encoder = encoder
         self.decoder = decoder
         
-        # Keep role embeddings as Embedding for compatibility
-        self.role_embeddings = nn.Embedding(num_embeddings=n_roles, embedding_dim=self.embed_dim)
+        # Keep role embeddings with original dimensions
+        self.role_embeddings = nn.Embedding(num_embeddings=n_roles, embedding_dim=role_embed_dim)
         if freeze_role_embeddings:
             for param in self.role_embeddings.parameters():
                 param.requires_grad = False
         
+        # Add projection layers to map roles and fillers to common VSA dimension
+        self.role_to_vsa = nn.Linear(role_embed_dim, self.vsa_dim)
+        self.filler_to_vsa = nn.Linear(filler_embed_dim, self.vsa_dim)
+        
+        # Add projection layer to map back from VSA to filler dimension (for quantiser compatibility)
+        self.vsa_to_filler = nn.Linear(self.vsa_dim, filler_embed_dim)
+        
         # Add VSA binding layer to convert encoder output to bound VSA representation
-        # This layer takes (N, D_F, D_R) and outputs (N, D) bound representation
         encoder_output_dim = role_embed_dim * filler_embed_dim  # D_F * D_R
-        self.vsa_binding_layer = nn.Linear(encoder_output_dim, self.embed_dim)
+        self.vsa_binding_layer = nn.Linear(encoder_output_dim, self.vsa_dim)
         
         self.quantiser = Quantiser(n_fillers=n_fillers,
                                   filler_embed_dim=filler_embed_dim,
@@ -231,7 +238,7 @@ class SoftTPRAutoencoder(AbstractAE):
         if key == FILLER_IDXS: 
             return quantised_out[FILLER_IDXS].to(torch.float32)                                 # (N, N_{R})
         if key == Z_SOFT_TPR: 
-            return z  # z is now the bound VSA representation (N, D)
+            return z  # z is now the bound VSA representation (N, vsa_dim)
         if key == Z_TPR or TPR_BINDINGS in key: 
             constructor_out = self.construct(quantised_out[QUANTISED_FILLERS_SG])
             if key == Z_TPR: 
@@ -258,22 +265,32 @@ class SoftTPRAutoencoder(AbstractAE):
         Performs VSA unbinding operation using inverse permutations
         
         Inputs:
-            z (torch.Tensor): bound VSA representation of dimension (N, D)
+            z (torch.Tensor): bound VSA representation of dimension (N, vsa_dim)
         Returns:
-            torch.Tensor: tensor of dimension (N, N_{R}, D) containing the unbound fillers
+            torch.Tensor: tensor of dimension (N, N_{R}, filler_embed_dim) containing the unbound fillers
         """
         batch_size = z.shape[0]
         
-        # z should now be (N, D) - a bound VSA representation
-        assert len(z.shape) == 2 and z.shape[1] == self.embed_dim, f"Expected bound VSA shape (N, {self.embed_dim}), got {z.shape}"
+        # z should now be (N, vsa_dim) - a bound VSA representation
+        assert len(z.shape) == 2 and z.shape[1] == self.vsa_dim, f"Expected bound VSA shape (N, {self.vsa_dim}), got {z.shape}"
         
-        # Generate role permutations from role embeddings
-        role_perms = torch.argsort(self.role_embeddings.weight, dim=-1)  # (N_R, D)
+        # Project role embeddings to VSA space and generate permutations
+        roles_in_vsa = self.role_to_vsa(self.role_embeddings.weight)  # (N_R, vsa_dim)
+        role_perms = torch.argsort(roles_in_vsa, dim=-1)  # (N_R, vsa_dim)
+        
         # Expand z to match roles and expand role_perms for batch
-        z_expanded = z.unsqueeze(1).expand(-1, self.n_roles, -1)  # (N, N_R, D)
-        role_perms_expanded = role_perms.unsqueeze(0).expand(batch_size, -1, -1)  # (N, N_R, D)
+        z_expanded = z.unsqueeze(1).expand(-1, self.n_roles, -1)  # (N, N_R, vsa_dim)
+        role_perms_expanded = role_perms.unsqueeze(0).expand(batch_size, -1, -1)  # (N, N_R, vsa_dim)
+        
         # Unbind using VSA permutation
-        soft_fillers = vsa_unbinding(z_expanded, role_perms_expanded)  # (N, N_R, D)
+        soft_fillers_vsa = vsa_unbinding(z_expanded, role_perms_expanded)  # (N, N_R, vsa_dim)
+        
+        # Project back to original filler dimension for compatibility with quantiser
+        if self.vsa_dim != self.filler_embed_dim:
+            soft_fillers = self.vsa_to_filler(soft_fillers_vsa.view(-1, self.vsa_dim)).view(batch_size, self.n_roles, self.filler_embed_dim)
+        else:
+            soft_fillers = soft_fillers_vsa
+            
         return soft_fillers
 
     def construct(self, quantised_fillers: torch.Tensor) -> Dict:
@@ -281,22 +298,28 @@ class SoftTPRAutoencoder(AbstractAE):
         Apply VSA binding to the quantised fillers and roles
         
         Inputs:
-            quantised_fillers (torch.Tensor): tensor of dimension (N, N_{R}, D)
+            quantised_fillers (torch.Tensor): tensor of dimension (N, N_{R}, filler_embed_dim)
         Returns:
             Dict {str: torch.Tensor}: containing:
-                the explicit VSA representation (N, D),
-                the VSA bindings (N, N_{R}, D)
+                the explicit VSA representation (N, vsa_dim),
+                the VSA bindings (N, N_{R}, vsa_dim)
         """
         batch_size = quantised_fillers.shape[0]
-        # Generate role permutations
-        role_perms = torch.argsort(self.role_embeddings.weight, dim=-1)  # (N_R, D)
+        
+        # Project fillers to VSA space
+        fillers_vsa = self.filler_to_vsa(quantised_fillers.view(-1, self.filler_embed_dim)).view(batch_size, self.n_roles, self.vsa_dim)  # (N, N_R, vsa_dim)
+        
+        # Project role embeddings to VSA space and generate permutations
+        roles_in_vsa = self.role_to_vsa(self.role_embeddings.weight)  # (N_R, vsa_dim)
+        role_perms = torch.argsort(roles_in_vsa, dim=-1)  # (N_R, vsa_dim)
+        
         # Expand for batch
-        role_perms = role_perms.unsqueeze(0).expand(batch_size, -1, -1)  # (N, N_R, D)
+        role_perms = role_perms.unsqueeze(0).expand(batch_size, -1, -1)  # (N, N_R, vsa_dim)
         
         # Bind using VSA permutation
-        vsa_bindings = vsa_binding(quantised_fillers, role_perms)  # (N, N_R, D)
+        vsa_bindings = vsa_binding(fillers_vsa, role_perms)  # (N, N_R, vsa_dim)
         # Sum across roles to get final representation
-        z_vsa = vsa_bindings.sum(dim=1)  # (N, D)
+        z_vsa = vsa_bindings.sum(dim=1)  # (N, vsa_dim)
         
         return {Z_TPR: z_vsa, TPR_BINDINGS: vsa_bindings}
     
