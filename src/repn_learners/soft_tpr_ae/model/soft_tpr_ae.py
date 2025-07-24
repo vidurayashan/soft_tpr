@@ -354,12 +354,12 @@ class SoftTPRAutoencoder(AbstractAE):
             
         ws_ce_loss = F.cross_entropy(dist, one_hot)
         
-        mask = F.gumbel_softmax(dist, dim=1, hard=True).unsqueeze(-1).expand(-1, -1, self.embed_dim).to(bool)  # (N_{B}, N_{R}, D)
-        vsa_bindings_split = torch.stack(torch.chunk(vsa_bindings, 2, 0), dim=1)  # (N_{B}, 2, N_{R}, D)
+        mask = F.gumbel_softmax(dist, dim=1, hard=True).unsqueeze(-1).expand(-1, -1, self.vsa_dim).to(bool)  # (N_{B}, N_{R}, vsa_dim)
+        vsa_bindings_split = torch.stack(torch.chunk(vsa_bindings, 2, 0), dim=1)  # (N_{B}, 2, N_{R}, vsa_dim)
         
         # Swap the selected bindings
-        temp0 = vsa_bindings_split[:, 0][mask].reshape(N, self.embed_dim) 
-        temp1 = vsa_bindings_split[:, 1][mask].reshape(N, self.embed_dim)
+        temp0 = vsa_bindings_split[:, 0][mask].reshape(N, self.vsa_dim) 
+        temp1 = vsa_bindings_split[:, 1][mask].reshape(N, self.vsa_dim)
         
         vsa_bindings_split[:, 0][mask] = temp1.view(-1)
         vsa_bindings_split[:, 1][mask] = temp0.view(-1)
