@@ -32,7 +32,7 @@ parser.add_argument('--gadi', action='store_true',
 
 # 1. DATA DIRECTORIES
 parser.add_argument('--data_dir', type=str, 
-                    default='C:\\Users\\21361535\\Downloads\\soft_tpr_datasets', 
+            default='/scratch/jq77/vs9475/datasets/soft_tpr_datasets/', 
                     help='Location of datasets')
 
 # 2. DATASET 
