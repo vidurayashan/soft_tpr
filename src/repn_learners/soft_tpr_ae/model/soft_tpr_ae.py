@@ -137,6 +137,10 @@ class SoftTPRAutoencoder(AbstractAE):
         # Add projection layer to map back from VSA to filler dimension (for quantiser compatibility)
         self.vsa_to_filler = nn.Linear(self.vsa_dim, filler_embed_dim)
         
+        # Add projection layer to convert VSA representation to decoder expected dimension
+        decoder_expected_dim = role_embed_dim * filler_embed_dim  # D_F * D_R (original TPR size)
+        self.vsa_to_decoder = nn.Linear(self.vsa_dim, decoder_expected_dim)
+        
         # Add VSA binding layer to convert encoder output to bound VSA representation
         encoder_output_dim = role_embed_dim * filler_embed_dim  # D_F * D_R
         self.vsa_binding_layer = nn.Linear(encoder_output_dim, self.vsa_dim)
@@ -182,7 +186,10 @@ class SoftTPRAutoencoder(AbstractAE):
         }
 
     def decode(self, x: torch.Tensor) -> torch.Tensor: 
-        return self.decoder(x)
+        # Convert VSA representation back to original decoder expected size
+        # x is (N, vsa_dim), decoder expects (N, role_embed_dim * filler_embed_dim)
+        decoder_input = self.vsa_to_decoder(x)
+        return self.decoder(decoder_input)
 
     def encode(self, x: torch.Tensor) -> torch.Tensor: 
         # Original encoder output: (N, D_F, D_R)
