@@ -514,7 +514,7 @@ if __name__ == "__main__":
     model = models[args.dataset][model_args.model](model_args.hidden, k=model_args.k, num_channels=model_args.num_channels)
     model.cuda()
     # load
-    model.load_state_dict(torch.load(model_args.path, map_location='cpu'))
+    model.load_state_dict(torch.load(model_args.path, map_location='cpu', weights_only=False))
 
     vct_enc = VCT_Encoder(z_index_dim = meta_args.concepts_num)
     vct_dec = VCT_Decoder(index_num = model_args.k, z_index_dim=model_args.shape_num, ce_loss=True)
@@ -530,8 +530,8 @@ if __name__ == "__main__":
 
     if args.load_path:
         print(f'LOADING VCT ENC AND DEC FROM {args.load_path}')
-        vct_enc.load_state_dict(torch.load(args.load_path)['encoder_model_state_dict'])
-        vct_dec.load_state_dict(torch.load(args.load_path)['decoder_model_state_dict'])
+        vct_enc.load_state_dict(torch.load(args.load_path, weights_only=False)['encoder_model_state_dict'])
+        vct_dec.load_state_dict(torch.load(args.load_path, weights_only=False)['decoder_model_state_dict'])
 
     kwargs = {'num_workers': 8, 'pin_memory': False}
     dataset_train_dir = os.path.join(args.data_dir, '')

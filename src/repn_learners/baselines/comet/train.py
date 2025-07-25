@@ -472,7 +472,7 @@ def main_single(rank, FLAGS):
     if FLAGS.resume_iter != 0:
         model_path = osp.join(logdir, "model_{}.pth".format(FLAGS.resume_iter))
 
-        checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
+        checkpoint = torch.load(model_path, map_location=torch.device('cpu'), weights_only=False)
         FLAGS = checkpoint['FLAGS']
 
         FLAGS.resume_iter = FLAGS_OLD.resume_iter

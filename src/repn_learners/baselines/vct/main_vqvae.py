@@ -332,7 +332,7 @@ def main(args):
         model.cuda()
 
     if args.load_path != "":
-        model.load_state_dict(torch.load(args.load_path))
+        model.load_state_dict(torch.load(args.load_path, weights_only=False))
         start = int(args.load_path.split("_")[-1].replace(".pth",""))
     else:
         start = 1

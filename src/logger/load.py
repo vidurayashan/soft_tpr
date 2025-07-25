@@ -110,7 +110,7 @@ def load_most_recent_model_and_args(model_type: str, save_dir: str, encoder_type
         return load_model_from_path(model_dir), load_args(args_dir)
 
 def load_args(args_path: str): 
-    return torch.load(args_path)
+    return torch.load(args_path, weights_only=False)
 
 def get_corresponding_clf_from_model_path(model_path: str) -> Clf: 
     parent_dir = '/'.join(model_path.split('/')[:-2])
@@ -131,7 +131,7 @@ def load_corresponding_args_from_path(model_path: str):
 
 def load_model_from_path(model_path: str):
     print(f'Model path is {model_path}')
-    model_type, *saved = torch.load(Path(model_path), map_location='cuda:0')
+    model_type, *saved = torch.load(Path(model_path), map_location='cuda:0', weights_only=False)
     if model_type == SOFT_TPR_AE: 
         model_state, model_kwargs, e_state, d_state, e_meta, d_meta = saved 
         encoder = encoders_map[e_meta['class']](**e_meta['kwargs'])

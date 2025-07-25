@@ -23,7 +23,7 @@ def init_model(FLAGS, device):
     return models, optimizers
 
 def load_comet(args): 
-    checkpoint = torch.load(args.checkpoint_dir, map_location=torch.device('cpu'))
+    checkpoint = torch.load(args.checkpoint_dir, map_location=torch.device('cpu'), weights_only=False)
 
     models, _ = init_model(args, torch.device('cuda'))
     for i, model in enumerate(models): 
@@ -47,7 +47,7 @@ def set_wandb_run_name(args):
     args.wandb_run_name = wandb_run_name
     
 def load_comet(args): 
-    checkpoint = torch.load(args.checkpoint_dir, map_location=torch.device('cpu'))
+    checkpoint = torch.load(args.checkpoint_dir, map_location=torch.device('cpu'), weights_only=False)
 
     models, _ = init_model(args, torch.device('cuda'))
     for i, model in enumerate(models): 

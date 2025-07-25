@@ -53,7 +53,7 @@ def load_vct_model(meta_args):
     vq_vae_model = models[args.dataset][model_args.model](model_args.hidden, k=model_args.k, num_channels=model_args.num_channels)
     vq_vae_model.cuda()
     # load
-    vq_vae_model.load_state_dict(torch.load(model_args.path, map_location='cpu'))
+    vq_vae_model.load_state_dict(torch.load(model_args.path, map_location='cpu', weights_only=False))
 
     vct_enc = VCT_Encoder(z_index_dim = meta_args.concepts_num)
     vct_dec = VCT_Decoder(index_num = model_args.k, z_index_dim=model_args.shape_num, ce_loss=True)
@@ -61,8 +61,8 @@ def load_vct_model(meta_args):
     vct_enc.cuda()
     vct_dec.cuda()
 
-    vct_enc.load_state_dict(torch.load(meta_args.checkpoint_dir)['encoder_model_state_dict'])
-    vct_dec.load_state_dict(torch.load(meta_args.checkpoint_dir)['decoder_model_state_dict'])
+    vct_enc.load_state_dict(torch.load(meta_args.checkpoint_dir, weights_only=False)['encoder_model_state_dict'])
+    vct_dec.load_state_dict(torch.load(meta_args.checkpoint_dir, weights_only=False)['decoder_model_state_dict'])
 
     logging.info('****SUCCESSFULLY LOADED****')
     vq_vae_model.eval()
